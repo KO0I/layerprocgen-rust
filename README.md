@@ -1,10 +1,22 @@
 # layerprocgen-rust
 
-A Rust port of LayerProCGen, with an engine-independent generation library and a planned raylib viewer.
+A Rust port of [LayerProCGen](https://github.com/KO0I/LayerProCGen), a framework for layered procedural world generation.
+
+The goal is an engine-independent Rust library for deterministic generation, chunk dependencies, and world streaming. Rendering integrations can build on the library without tying its core to a particular graphics library or game engine.
 
 ## Status
 
-Repository scaffold only. No generation algorithms, chunk runtime, or raylib viewer have been ported yet. The working C++ implementation remains available as a reference; its tests do not establish Rust parity.
+The repository contains a dependency-free Rust crate, CI checks, and a [port plan](docs/port-plan.md). Generation algorithms and the chunk runtime are not implemented yet.
+
+## Planned capabilities
+
+- Deterministic coordinate arithmetic, bounds, fixed-point values, and hashing.
+- Chunk requests, dependency tracking, loading, and unloading.
+- Explicit ownership of generated data, with safe cancellation and shutdown.
+- Headless samples and behavioral tests for repeatable generation.
+- Terrain generation, floating origins, and streaming.
+
+These are implementation goals, not capabilities of the current scaffold.
 
 ## Build
 
@@ -17,15 +29,13 @@ cargo fmt --check
 cargo clippy --offline --all-targets -- -D warnings
 ```
 
-The initial crate has no dependencies. Tests currently verify only that the crate builds; there are no behavioral tests yet.
+The initial crate has no dependencies. There are no behavioral tests yet; `cargo test` currently checks compilation and runs zero tests.
 
-## References and provenance
+## Project origins
 
-- [Original C#/Unity source](https://github.com/KO0I/LayerProCGen/tree/cc9905d).
-- [C++20 port baseline](https://github.com/KO0I/LayerProCGen/tree/8fb913c), branch `feature/cpp20-raylib-port`.
-- [Port plan](docs/port-plan.md).
+LayerProCGen's original implementation is the behavioral reference for this port. The [port plan](docs/port-plan.md) records source baselines and the implementation sequence.
 
-This repository starts with new Rust scaffolding rather than copying Unity assets or C++ build artifacts. Source history and contributor attribution remain available in the linked reference repository. When translating code, retain applicable copyright and license notices.
+This repository starts with new Rust scaffolding. Preserve source attribution and applicable license notices when translating algorithms into Rust.
 
 ## License
 
