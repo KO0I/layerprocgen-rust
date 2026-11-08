@@ -2,9 +2,15 @@
 name = "layerprocgen"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.88"
 license = "MPL-2.0"
 description = "Engine-independent Rust port of LayerProCGen"
 repository = "https://github.com/KO0I/layerprocgen-rust"
 publish = false
 
 [dependencies]
+
+[workspace]
+members = ["viewer"]
+default-members = ["."]
+resolver = "3"

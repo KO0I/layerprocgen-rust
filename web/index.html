@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LayerProCGen · Rust WebGL2</title>
+<link rel="icon" href="data:,">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #091018; color: #dceae9; font: 14px system-ui, sans-serif; }
+canvas { display: block; width: 100vw; height: 100dvh; touch-action: none; cursor: grab; }
+canvas:active { cursor: grabbing; }
+header, footer { position: fixed; left: 24px; right: 24px; pointer-events: none; }
+header { top: 22px; display: flex; justify-content: space-between; align-items: start; }
+h1 { margin: 0 0 5px; font-size: 21px; font-weight: 600; letter-spacing: -.5px; }
+.subtitle { color: #81a9aa; font-size: 12px; }
+.controls { display: flex; gap: 8px; pointer-events: auto; }
+button { border: 1px solid #36505a; border-radius: 6px; padding: 9px 13px; background: #11242ce8; color: #dceae9; cursor: pointer; }
+button:hover { background: #21404a; }
+button:focus-visible { outline: 2px solid #80d6ba; }
+footer { bottom: 20px; display: flex; justify-content: space-between; gap: 18px; color: #8fafb4; font-size: 12px; }
+#status { color: #a2e8c9; font-variant-numeric: tabular-nums; }
+#error { position: fixed; top: 100px; left: 24px; right: 24px; color: #ffb39c; white-space: pre-wrap; }
+@media(max-width:600px) { header,footer { left: 14px; right: 14px; } header { gap: 10px; } .controls { gap: 4px; } button { padding: 8px; } footer { flex-direction: column; gap: 5px; } }
+</style>
+<canvas id="world" aria-label="Procedurally generated cubes. Drag to explore or use WASD and arrow keys." tabindex="0"></canvas>
+<header><div><h1>LayerProCGen</h1><div class="subtitle">Rust · WebGL2 · seed 1234</div></div><div class="controls"><button id="home">Home</button><button id="pause">Pause queue</button><button id="stop">Stop</button></div></header>
+<div id="error" role="alert"></div>
+<footer><span>Drag or WASD to explore · pinch to zoom · twist to rotate · two-finger slide to tilt</span><span id="status">Loading Rust world…</span></footer>
+<script type="module" src="./main.js"></script>
+</html>

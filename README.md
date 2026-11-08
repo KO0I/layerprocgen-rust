@@ -1,42 +1,53 @@
 # layerprocgen-rust
 
-A Rust port of [LayerProCGen](https://github.com/KO0I/LayerProCGen), a framework for layered procedural world generation.
+Rust implementation of [LayerProCGen](https://github.com/KO0I/LayerProCGen)'s deterministic generation core, with a separate Rust/WebAssembly viewer using WebGL2.
 
-The goal is an engine-independent Rust library for deterministic generation, chunk dependencies, and world streaming. Rendering integrations can build on the library without tying its core to a particular graphics library or game engine.
+## Implemented
 
-## Status
+The core crate has no third-party dependencies. It includes coordinate arithmetic, half-open bounds, fixed-point values, RandomHash, floating-origin notifications, retained chunk requests, level dependencies, rollback, reusable records, stale-handle checks, action queues, object pools, work tracking, native executors, save-state encoding, and live state bindings.
 
-The repository contains a dependency-free Rust crate, CI checks, and a [port plan](docs/port-plan.md). Generation algorithms and the chunk runtime are not implemented yet.
+The point-generation and cube-spawning sample preserves the C++ baseline's seed, chunk sizes, positions, retained overlaps, FIFO scene actions, and shutdown behavior. The browser viewer provides movement, zoom, queue pause, stop, and restart. Generation and rendering live in separate crates.
 
-## Planned capabilities
+The port does not yet implement Unity terrain or path algorithms, or a climate-workbench importer. Those systems are also absent from the reference C++ milestone. See the [remaining work and climate boundary](docs/port-plan.md).
 
-- Deterministic coordinate arithmetic, bounds, fixed-point values, and hashing.
-- Chunk requests, dependency tracking, loading, and unloading.
-- Explicit ownership of generated data, with safe cancellation and shutdown.
-- Headless samples and behavioral tests for repeatable generation.
-- Terrain generation, floating origins, and streaming.
+## Build and check
 
-These are implementation goals, not capabilities of the current scaffold.
-
-## Build
-
-Use a stable Rust toolchain with edition 2024 support.
+Use Rust 1.88 or later. The viewer's cached dependencies are needed for workspace checks; fetch them once when online.
 
 ```sh
-cargo build --offline
-cargo test --offline
-cargo fmt --check
-cargo clippy --offline --all-targets -- -D warnings
+cargo fetch --locked
+cargo build --locked --offline
+cargo test --locked --offline --workspace
+cargo fmt --all --check
+cargo clippy --locked --offline --workspace --all-targets -- -D warnings
+cargo run --locked --offline --example headless_simple
 ```
 
-The initial crate has no dependencies. There are no behavioral tests yet; `cargo test` currently checks compilation and runs zero tests.
+## Run the WebGL2 viewer
 
-## Project origins
+Install the `wasm32-unknown-unknown` Rust target and `wasm-bindgen-cli` version `0.2.128`.
 
-LayerProCGen's original implementation is the behavioral reference for this port. The [port plan](docs/port-plan.md) records source baselines and the implementation sequence.
+```sh
+python3 tools/build-web.py
+python3 -m http.server 4173 --bind 127.0.0.1 --directory web
+```
 
-This repository starts with new Rust scaffolding. Preserve source attribution and applicable license notices when translating algorithms into Rust.
+Open <http://127.0.0.1:4173>. Drag or use WASD and arrow keys to move. Scroll to zoom.
+
+The [viewer guide](docs/webgl.md) includes browser verification and executable C++ comparison commands. The browser check verifies a WebGL2 context with WebGPU unavailable, rendered pixels, real input, streaming, deterministic return, resource retirement, and page lifetime.
+
+## Integration direction
+
+The Rust core produces CPU data and has no graphics backend requirement. For the climate-based game workflow, climate output supplies the base terrain. Generation layers can add detail, paths, and placement records, then return CPU data to the game's existing WebGL2 renderer. The standalone viewer is a validation example.
+
+Layer callbacks run synchronously. The scene action queue and state bindings belong to one thread. Native executors accept owned `Send` jobs separately. A worker integration must transfer owned CPU results to the scene owner.
+
+## Provenance and verification
+
+The translation reference is C++ commit `8fb913c7667e576b8f8cdbb62295d2e2a222b46b`. The original C# source remains the upstream behavioral authority. The executable comparison checks 759 rows covering hashes, fixed-point conversions, generated positions, and a save-state byte fixture. This does not claim full Unity equivalence.
+
+The [migration record](docs/migration.md) documents ownership choices, intentional changes, and checks. The [decision trail](docs/decisions.tsv) records the run's checkpoints.
 
 ## License
 
-MPL-2.0. See [LICENSE](LICENSE) and [Third Party Notices.md](Third%20Party%20Notices.md). The notices are retained from the reference project for future translations; their presence does not mean those components are already implemented in Rust.
+MPL-2.0. See [LICENSE](LICENSE) and [Third Party Notices.md](Third%20Party%20Notices.md). Translated algorithms retain their source attribution.

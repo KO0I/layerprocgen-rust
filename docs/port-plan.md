@@ -1,23 +1,35 @@
-# Rust port plan
+# Rust port status and remaining work
 
 ## Reference baseline
 
-Use the original C# source as the behavioral authority and C++ commit `8fb913c` as a tested implementation reference. C++ has 79 passing tests at repository creation. Its deterministic vectors were derived from source, not confirmed by executing C#/Unity.
+The C++ translation reference is commit `8fb913c7667e576b8f8cdbb62295d2e2a222b46b`. Its 79 existing tests pass. The original C# source remains the upstream behavioral authority. No Unity execution is claimed.
 
-## Implementation sequence
+## Implemented milestone
 
-1. Port coordinate arithmetic, half-open bounds, fixed-point values, and RandomHash. Test negative coordinates and explicit wrapping arithmetic against reference vectors.
-2. Build a deterministic synchronous chunk runtime with retained requests, dependency acquisition, release, pooling, and rollback on failure. Port lifecycle behavior tests before adding concurrency.
-3. Port the headless PointsLayer and PointsSpawningLayer sample. Verify overlapping requests, movement, reuse, and shutdown.
-4. Add a separate raylib viewer that displays the headless sample. Keep GPU handles and raylib calls on the rendering thread and keep rendering dependencies outside the core crate.
-5. Port terrain noise, geo grid, locations, cultivation, paths, and terrain deformation. Capture executable C# reference fixtures when a reference runtime becomes available.
-6. Add terrain meshes, camera controls, streaming, floating origin, and LOD. Check boundary continuity and resource retirement.
-7. Add bounded background generation with explicit cancellation and shutdown, then save-state behavior, performance measurements, and packaging.
+The Rust core implements deterministic numeric types, bounds, RandomHash, floating origin, retained synchronous chunk demand, previous-level and external dependencies, release and rollback, pooled records, stale-handle checks, scene action queues, resettable object pools, work tracking, native executors, save-state bytes, file replacement, and live state bindings.
 
-## Ownership direction
+The headless points sample and separate Rust/WebAssembly WebGL2 viewer use the same generation and lifecycle code. The viewer owns its graphics context and buffer. The core owns CPU results. The WebGL2 route replaces the earlier raylib plan.
 
-Prefer explicit chunk IDs and owned generation results over a direct translation of C# object references or C++ callback graphs. Choose concrete types as each behavior is implemented. Workers produce CPU data; the rendering thread owns GPU resources. Begin synchronously so deterministic behavior can be checked independently of scheduling.
+## Climate-based terrain and path integration
 
-## Completion criteria
+Use the climate workbench's output as the authoritative base map. The Rust generation core does not require a WebGL version. The game renderer continues to own its WebGL2 resources.
 
-A raylib terrain viewer streams across chunk boundaries and origin shifts without seams, retires resources safely, and shuts down cleanly. Fixed-seed fixtures cover heights, paths, and lifecycle behavior. Build instructions, asset licenses, controls, performance measurements, and intentional differences from Unity are documented.
+RFL already separates `native/world` terrain algorithms, the `native/terrain-wasm` worker adapter, and WebGL presentation. Its existing `BaseTerrain::ClimateMap` stores width, rows, and owned `Vec<f32>` heights. See the source project's `docs/decisions/0013-independent-terrain-compiler.md`.
+
+The standalone climate workbench's scientific export uses Gaussian latitude coordinates and heights in metres. The game's version-one climate snapshot uses a regular longitude/latitude raster and game units. These are different formats. Before adding an importer, define which export is the input, its coordinates and units, how it wraps longitude, and how ocean elevations are represented. The existing game snapshot adapter is a reference for those conversions.
+
+LayerProCGen layers should consume that base terrain and climate data, then produce local terrain changes, placement records, and paths. The current C++ milestone provides no terrain or path algorithms and no path interchange schema. The Rust point sample does not implement this application-specific integration.
+
+## Remaining sequence
+
+1. Define and validate a versioned climate input adapter against an actual exported world. Preserve macro terrain and sea/land classification.
+2. Port or implement terrain-detail and placement layers against that base. Check continuity across chunk and longitude boundaries.
+3. Define path connectivity, costs, constraints, and terrain modifications. Verify determinism against fixed exported worlds.
+4. Connect generated CPU results to the existing game resource adapter. Check stale responses, replacement, cancellation, floating origins, and cleanup.
+5. Add bounded background generation where needed. Keep worker-owned CPU state separate from renderer-owned GPU resources.
+
+## Ownership contract
+
+Layers are synchronous and shareable within one thread through `Rc`. Request tokens release retained demand on drop. External dependency registrations are weak; acquired provider leases remain alive through consumer destruction. Generation results are immutable shared values. A read callback can retire its request while keeping the value it is reading alive. Destroy hooks receive a shared view of the retired result.
+
+Native managed executors use owned `Send` tasks and cooperative stop tokens. Scene queues and live state bindings remain local. File APIs are native-only; the browser can use the byte codec through a future host adapter.

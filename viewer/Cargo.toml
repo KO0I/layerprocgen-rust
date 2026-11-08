@@ -1,0 +1,16 @@
+[package]
+name = "layerprocgen-web"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MPL-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+layerprocgen = { path = ".." }
+wasm-bindgen = "=0.2.128"
+js-sys = "=0.3.105"
+web-sys = { version = "=0.3.105", features = ["HtmlCanvasElement", "WebGl2RenderingContext", "WebGlBuffer", "WebGlProgram", "WebGlShader"] }

@@ -1,4 +1,14 @@
-//! Engine-independent Rust port of LayerProCGen.
+//! Deterministic layered procedural generation, independent of rendering.
 //!
-//! Initial scaffold. Generation, chunk streaming, and rendering are not yet implemented.
-//! See `docs/port-plan.md` for the implementation sequence.
+//! Ported from LayerProCGen's C++ baseline 8fb913c. The browser adapter lives
+//! in the separate layerprocgen-web crate and uses WebGL directly.
+
+pub mod common;
+pub mod core;
+pub mod executor;
+pub mod floating_origin;
+pub mod samples;
+pub mod save_state;
+
+/// Version of this Rust port.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
