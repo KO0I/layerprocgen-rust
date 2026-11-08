@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "snapshotSha256": "e9225cfd01683391d78899510e89d213351d563184dc77d95c9b27d2dee4db0a",
+  "sourceCommit": "388ae34fd8bd3e8e114b5423b3affab97bcd52ce",
+  "sourceHashes": {
+    "dist/climate/terrain.js": "ceffb58f40dac41984523fd74ea01e900245366413b45c5313134678899ad248",
+    "dist/climate/flight-snapshot.js": "dc24dddd8e61160a7dc0016628fe74e6571da716d35b37816a9f2e647e745242",
+    "dist/climate-world.js": "a0c9afd1e382d2ff0d5a924dd3a26b6282198856b62fd7734b2f314a9e4067de",
+    "dist/climate-sample.js": "dd241350943c3d402d8a40ec4fd317a36a385abcd3b945435fbe142d75c26f01",
+    "dist/world-core.js": "49fc0e786bf6f78828dc9350b509352cbd6b2218c4235060b4ca18599e12c71e",
+    "dist/surface-stream-core.js": "e0165efef27f4b968a98478a23ca857ae85161e38fb7dc040b6a447963151414",
+    "dist/ground-scale.js": "1e4b5dfebdc3dbdf7fc0e8182b8a967df9ecedc5e0fc539216d68eeab9285165",
+    "dist/settlements.js": "715db296577b03ff0f9eca2694c4cd370566d961d6fc881730783e7756d1d6dc",
+    "native/world/src/rocky.rs": "84e22b2786862a2841d27413656df7f87cf46ca94b4bebd17283f739f32a7a1e"
+  },
+  "settings": {
+    "seed": 1610,
+    "sea": 0.45,
+    "frequency": 3,
+    "relief": 3000,
+    "cloudThreshold": 0.48,
+    "cloudFrequency": 2.2,
+    "cloudDrift": 0.03
+  },
+  "units": "RFL world units; snapshot conversion is metres / 6371",
+  "radius": 1000,
+  "seaLevel": 0,
+  "seed": 1610,
+  "width": 256,
+  "rows": 128,
+  "frame": {
+    "center": [
+      0.9745928472107236,
+      0.2068482987815016,
+      -0.08592184505056787
+    ],
+    "right": [
+      -0.017682468323930285,
+      0.45346334155548,
+      0.8910995052065237
+    ],
+    "forward": [
+      0.22328482366624994,
+      -0.8669398936238526,
+      0.4455997176433069
+    ]
+  },
+  "sites": [
+    {
+      "p": [
+        972.4360393533541,
+        165.08770163188734,
+        -166.08873873122184
+      ],
+      "up": [
+        0.9722069808330159,
+        0.16504881501813434,
+        -0.1660496163219332
+      ],
+      "h": 0.2356067430639282,
+      "latitude": 0.16504881501813434,
+      "group": "alien-buildings",
+      "id": "0:21:21:0:0",
+      "hash": 3261899296,
+      "size": 4,
+      "yaw": 0,
+      "chart": {
+        "x": -90.68476201047665,
+        "z": 1.3934734531602514e-14
+      }
+    },
+    {
+      "p": [
+        969.2668064972124,
+        247.02181622828272,
+        -5.0931380804367485
+      ],
+      "up": [
+        0.9690130261833276,
+        0.24695713922331505,
+        -0.005091804558879993
+      ],
+      "h": 0.2618956680947544,
+      "latitude": 0.24695713922331505,
+      "group": "alien-buildings",
+      "id": "0:18:22:0:4",
+      "hash": 231267746,
+      "size": 4,
+      "yaw": 3.141592653589793,
+      "chart": {
+        "x": 90.68476201047818,
+        "z": 7.838288174026414e-15
+      }
+    }
+  ],
+  "grid": {
+    "width": 129,
+    "rows": 65,
+    "spacing": 2,
+    "minX": -128,
+    "minZ": -64
+  },
+  "heightsSha256": "82ca0aac7a0bf366431d308abb62b5cc36173d0a59e1718735f864d581cb77f7",
+  "basinsSha256": "fbd69601e265803b521c17ef472b65806cbbf35a844b3c32aa5923e46c9c8f88",
+  "groundSha256": "0132089598b968dbc8e52d163b305c98f0684a0fb7d746d41b137faff28c638c",
+  "sampling": "RFL SurfaceTerrain::elevation for planning; JS groundElevation samples for independent comparison",
+  "limitations": [
+    "building centers, not entrance portals",
+    "bounded gnomonic chart, not global spherical routing",
+    "terrain-only constraints; building volumes are not obstacles"
+  ]
+}

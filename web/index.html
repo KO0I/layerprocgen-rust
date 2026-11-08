@@ -20,10 +20,10 @@ button:focus-visible { outline: 2px solid #80d6ba; }
 footer { bottom: 20px; display: flex; justify-content: space-between; gap: 18px; color: #8fafb4; font-size: 12px; }
 #status { color: #a2e8c9; font-variant-numeric: tabular-nums; }
 #error { position: fixed; top: 100px; left: 24px; right: 24px; color: #ffb39c; white-space: pre-wrap; }
-@media(max-width:600px) { header,footer { left: 14px; right: 14px; } header { gap: 10px; } .controls { gap: 4px; } button { padding: 8px; } footer { flex-direction: column; gap: 5px; } }
+@media(max-width:600px) { header,footer { left: 14px; right: 14px; } header { gap: 10px; flex-direction: column; } .controls { gap: 4px; } button { padding: 8px; } footer { flex-direction: column; gap: 5px; } }
 </style>
 <canvas id="world" aria-label="Procedurally generated cubes. Drag to explore or use WASD and arrow keys." tabindex="0"></canvas>
-<header><div><h1>LayerProCGen</h1><div class="subtitle">Rust · WebGL2 · seed 1234</div></div><div class="controls"><button id="home">Home</button><button id="pause">Pause queue</button><button id="stop">Stop</button></div></header>
+<header><div><h1>LayerProCGen</h1><div id="subtitle" class="subtitle">Rust · WebGL2 · seed 1234</div></div><div class="controls"><button id="route">Climate path</button><button id="home">Home</button><button id="pause">Pause queue</button><button id="stop">Stop</button></div></header>
 <div id="error" role="alert"></div>
 <footer><span>Drag or WASD to explore · pinch to zoom · twist to rotate · two-finger slide to tilt</span><span id="status">Loading Rust world…</span></footer>
 <script type="module" src="./main.js"></script>

@@ -18,13 +18,13 @@ RFL already separates `native/world` terrain algorithms, the `native/terrain-was
 
 The standalone climate workbench's scientific export uses Gaussian latitude coordinates and heights in metres. The game's version-one climate snapshot uses a regular longitude/latitude raster and game units. These are different formats. Before adding an importer, define which export is the input, its coordinates and units, how it wraps longitude, and how ocean elevations are represented. The existing game snapshot adapter is a reference for those conversions.
 
-LayerProCGen layers should consume that base terrain and climate data, then produce local terrain changes, placement records, and paths. The current C++ milestone provides no terrain or path algorithms and no path interchange schema. The Rust point sample does not implement this application-specific integration.
+LayerProCGen layers should consume that base terrain and climate data, then produce local terrain changes, placement records, and paths. The current C++ milestone provides no terrain or path algorithms and no path interchange schema. The [fixed RFL route checkpoint](route-checkpoint.md) now implements bounded routing between two existing climate-world building records, calling the existing RFL Rust sampler and exporting explicit widths and body-local path points. The route is previewed separately in WebGL2. Live game worker consumption and terrain deformation remain unimplemented.
 
 ## Remaining sequence
 
-1. Define and validate a versioned climate input adapter against an actual exported world. Preserve macro terrain and sea/land classification.
+1. Extend the verified fixed-world adapter to accept live versioned climate snapshots. Preserve macro terrain and sea/land classification.
 2. Port or implement terrain-detail and placement layers against that base. Check continuity across chunk and longitude boundaries.
-3. Define path connectivity, costs, constraints, and terrain modifications. Verify determinism against fixed exported worlds.
+3. Extend the verified bounded path planner with application-specific connectivity, building/entrance constraints, and terrain modifications.
 4. Connect generated CPU results to the existing game resource adapter. Check stale responses, replacement, cancellation, floating origins, and cleanup.
 5. Add bounded background generation where needed. Keep worker-owned CPU state separate from renderer-owned GPU resources.
 

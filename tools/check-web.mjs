@@ -176,11 +176,81 @@ try {
   assert.equal(resetAngle.yaw,oriented.yaw);assert.equal(resetAngle.pitch,oriented.pitch);
   report.checks.push('Real two-finger twist rotates, vertical slide tilts within limits, and Home resets orientation');
 
-  await page.evaluate('window.layerprocgen.viewer.frame(390,844)');
+  await page.evaluate("document.getElementById('route').click()");
+  await until(state,s=>s.mode==='route','Climate route loads in Rust viewer');
+  const route = await page.evaluate('window.layerprocgen.route');
+  assert.equal(route.sampler,'rfl_world::SurfaceTerrain::elevation');
+  assert.deepEqual(route.siteIds,['0:21:21:0:0','0:18:22:0:4']);
+  assert.deepEqual(route.width,{surface:4,shoulder:1,material:5});
+  for (const [i,point] of [[0,route.points[0]],[1,route.points.at(-1)]]) {
+    assert.equal(point[0],route.manifest.sites[i].chart.x);
+    assert.equal(point[2],route.manifest.sites[i].chart.z);
+  }
+  const routePixels = () => page.evaluate(`(() => {
+    const canvas=document.getElementById('world');
+    window.layerprocgen.viewer.frame(canvas.width,canvas.height);
+    const gl=canvas.getContext('webgl2'),data=new Uint8Array(canvas.width*canvas.height*4);
+    gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,data);
+    const isGold=i=>data[i]>200 && data[i+1]>140 && data[i+1]<220 && data[i+2]<100;
+    let gold=0,start=0,goal=0;
+    for(let i=0;i<data.length;i+=4){
+      if(data[i]>200 && data[i+1]>140 && data[i+1]<220 && data[i+2]<100)gold++;
+      if(data[i]<100 && data[i+1]>220 && data[i+2]>220)start++;
+      if(data[i]>230 && data[i+1]>60 && data[i+1]<140 && data[i+2]<110)goal++;
+    }
+    const state=JSON.parse(window.layerprocgen.viewer.stats()),points=window.layerprocgen.route.points.slice(12,-12);
+    let covered=0;
+    for(const [x,h,z] of points){
+      const dx=x-state.x,dz=z-state.y,rx=dx*Math.cos(state.yaw)-dz*Math.sin(state.yaw),ry=dx*Math.sin(state.yaw)+dz*Math.cos(state.yaw);
+      const px=Math.round((rx/(state.span*canvas.width/canvas.height)+1)*canvas.width/2);
+      const py=Math.round((((h*80+.5)*Math.cos(state.pitch)-ry*Math.sin(state.pitch))/state.span+1)*canvas.height/2);
+      let found=false;
+      for(let y=py-1;y<=py+1;y++)for(let x=px-1;x<=px+1;x++)if(x>=0&&y>=0&&x<canvas.width&&y<canvas.height&&isGold((y*canvas.width+x)*4))found=true;
+      if(found)covered++;
+    }
+    return {gold,start,goal,centerlineCoverage:covered/points.length,error:gl.getError()};
+  })()`);
+  const mobileRoutePixels=await routePixels();
+  assert(mobileRoutePixels.gold>100,'Route surface renders gold pixels');
+  assert(mobileRoutePixels.start>5 && mobileRoutePixels.goal>5,'Both real site markers fit on mobile');
+  assert.equal(mobileRoutePixels.error,0);
+  assert(mobileRoutePixels.centerlineCoverage>.98,`Route surface must be continuous at 45-degree tilt: ${mobileRoutePixels.centerlineCoverage}`);
+  for(const angle of [Math.PI/12,4*Math.PI/9]) {
+    await page.evaluate(`window.layerprocgen.viewer.set_angles(${(await state()).yaw},${angle})`);
+    assert((await routePixels()).centerlineCoverage>.98,`Route remains continuous at tilt ${angle}`);
+  }
+  await page.evaluate("document.getElementById('home').click()");
+  const routeBase=await state();
+  await page.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:fingers(100)});
+  await page.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:fingers(200)});
+  await until(state,s=>Math.abs(s.span-routeBase.span/2)<1,'Climate route pinch zoom');
+  await page.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.evaluate("document.getElementById('home').click();document.getElementById('stop').click()");
+  await until(state,s=>s.stopped,'Climate route stops');
+  assert.equal((await routePixels()).gold,0);
+  await until(()=>page.evaluate("document.getElementById('status').textContent"),s=>s.includes('stopped'),'Stopped route status updates');
+  await page.evaluate("document.getElementById('stop').click()");
+  await until(state,s=>!s.stopped,'Climate route restarts');
+  assert((await routePixels()).gold>100);
+  await page.send('Emulation.setDeviceMetricsOverride',{width:1100,height:760,deviceScaleFactor:1,mobile:false});
+  await until(()=>page.evaluate('document.getElementById("world").width'),width=>width===1100,'Route desktop resize');
+  await page.evaluate("document.getElementById('home').click()");
+  const routeScreenshot=await page.send('Page.captureScreenshot',{format:'png'});
+  await writeFile(path.join(output,'route.png'),Buffer.from(routeScreenshot.data,'base64'));
+  report.route={siteIds:route.siteIds,points:route.points.length,width:route.width,mobilePixels:mobileRoutePixels};
+  await page.evaluate("document.getElementById('route').click()");
+  await until(state,s=>s.mode==='points' && s.objects>0,'Return to deterministic points scene');
+  report.checks.push('Climate route loads exact site endpoints and widths, renders terrain, path and both markers on mobile, supports pinch, stops/restarts, and switches back to points');
+
+  await page.evaluate("window.layerprocgen.viewer.frame(document.getElementById('world').width,document.getElementById('world').height)");
   await page.evaluate("window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})); window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));");
   await pause(100);
-  await page.evaluate('window.layerprocgen.viewer.frame(390,844)');
+  await page.evaluate("window.layerprocgen.viewer.frame(document.getElementById('world').width,document.getElementById('world').height)");
   report.checks.push('Stop destroys every object, restart succeeds, mobile viewport renders, and persisted pagehide retains the viewer');
+  await page.send('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/?scene=route`});
+  await until(()=>page.evaluate('window.layerprocgen?.state'),s=>s?.mode==='route','Direct climate route link');
+  assert((await routePixels()).centerlineCoverage>.98,'Direct link renders a continuous route');
+  report.checks.push('Direct route link starts the Rust WebGL2 terrain preview');
   assert.deepEqual(page.errors,[],'No browser exceptions');
   assert.equal(await page.evaluate('window.layerprocgenError ?? null'),null);
   report.result='PASS';

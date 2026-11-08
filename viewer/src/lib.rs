@@ -29,6 +29,17 @@ impl ViewAngles {
     }
 }
 
+struct RouteScene {
+    ground: Vec<f64>,
+    width: usize,
+    rows: usize,
+    spacing: f64,
+    min_x: f64,
+    min_z: f64,
+    points: Vec<[f64; 3]>,
+    surface_width: f64,
+}
+
 #[wasm_bindgen]
 pub struct Viewer {
     world: SampleWorld,
@@ -44,6 +55,7 @@ pub struct Viewer {
     paused: bool,
     stopped: bool,
     vertices: Vec<f32>,
+    route: Option<std::rc::Rc<RouteScene>>,
 }
 
 #[wasm_bindgen]
@@ -114,7 +126,63 @@ impl Viewer {
             paused: false,
             stopped: false,
             vertices: Vec::new(),
+            route: None,
         })
+    }
+
+    pub fn show_route(
+        &mut self,
+        ground: &[f64],
+        points: &[f64],
+        meta: &[f64],
+    ) -> Result<(), JsValue> {
+        if meta.len() != 6
+            || meta
+                .iter()
+                .chain(ground)
+                .chain(points)
+                .any(|v| !v.is_finite())
+        {
+            return Err(JsValue::from_str("Invalid route display data"));
+        }
+        let width = meta[0] as usize;
+        let rows = meta[1] as usize;
+        if !(2..=512).contains(&width)
+            || !(2..=512).contains(&rows)
+            || width as f64 != meta[0]
+            || rows as f64 != meta[1]
+            || ground.len() != width * rows
+            || points.len() < 6
+            || points.len() > 30000
+            || !points.len().is_multiple_of(3)
+            || meta[2] <= 0.
+            || meta[5] <= 0.
+        {
+            return Err(JsValue::from_str("Invalid route display dimensions"));
+        }
+        self.shutdown();
+        self.route = Some(std::rc::Rc::new(RouteScene {
+            ground: ground.to_vec(),
+            width,
+            rows,
+            spacing: meta[2],
+            min_x: meta[3],
+            min_z: meta[4],
+            points: points.as_chunks::<3>().0.to_vec(),
+            surface_width: meta[5],
+        }));
+        self.stopped = false;
+        self.x = 0.;
+        self.y = 0.;
+        self.span = 110.;
+        self.set_angles(0.6_f64.atan2(0.8), std::f64::consts::FRAC_PI_4)
+    }
+    pub fn show_points(&mut self) -> Result<(), JsValue> {
+        self.route = None;
+        self.x = 0.;
+        self.y = 0.;
+        self.span = 520.;
+        self.restart()
     }
 
     pub fn set_position(&mut self, x: f64, y: f64) -> Result<(), JsValue> {
@@ -155,7 +223,11 @@ impl Viewer {
         if !span.is_finite() {
             return Err(JsValue::from_str("Zoom must be finite"));
         }
-        self.span = span.clamp(220.0, 1200.0);
+        self.span = if self.route.is_some() {
+            span.clamp(40., 800.)
+        } else {
+            span.clamp(220., 1200.)
+        };
         Ok(())
     }
 
@@ -170,6 +242,10 @@ impl Viewer {
     }
 
     pub fn restart(&mut self) -> Result<(), JsValue> {
+        if self.route.is_some() {
+            self.stopped = false;
+            return Ok(());
+        }
         self.shutdown();
         self.world = SampleWorld::new().map_err(js_error)?;
         self.bounds = None;
@@ -182,6 +258,10 @@ impl Viewer {
             return Err(JsValue::from_str("Invalid canvas dimensions"));
         }
         self.aspect = f64::from(width) / f64::from(height);
+        if self.route.is_some() {
+            self.draw_route_scene(width, height);
+            return Ok(());
+        }
         if !self.stopped {
             let radius = self.view_radius();
             let center = Point::new(self.x as i32, self.y as i32);
@@ -250,7 +330,12 @@ impl Viewer {
             .collect::<Vec<_>>()
             .join(",");
         format!(
-            r#"{{"renderer":"webgl2","x":{},"y":{},"span":{},"yaw":{},"pitch":{},"objects":{},"created":{},"destroyed":{},"pending":{},"paused":{},"stopped":{},"positions":[{}]}}"#,
+            r#"{{"renderer":"webgl2","mode":"{}","x":{},"y":{},"span":{},"yaw":{},"pitch":{},"objects":{},"created":{},"destroyed":{},"pending":{},"paused":{},"stopped":{},"positions":[{}]}}"#,
+            if self.route.is_some() {
+                "route"
+            } else {
+                "points"
+            },
             self.x,
             self.y,
             self.span,
@@ -268,6 +353,79 @@ impl Viewer {
 }
 
 impl Viewer {
+    fn draw_route_scene(&mut self, width: i32, height: i32) {
+        let scene = self.route.as_ref().unwrap().clone();
+        self.gl.viewport(0, 0, width, height);
+        self.gl.clear_color(0.035, 0.055, 0.075, 1.);
+        self.gl.clear(Gl::COLOR_BUFFER_BIT | Gl::DEPTH_BUFFER_BIT);
+        if self.stopped {
+            return;
+        }
+        self.vertices.clear();
+        let low = scene.ground.iter().copied().fold(f64::INFINITY, f64::min);
+        let high = scene
+            .ground
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max);
+        for z in 0..scene.rows - 1 {
+            for x in 0..scene.width - 1 {
+                for (dx, dz) in [(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
+                    let h = scene.ground[(z + dz) * scene.width + x + dx];
+                    let t = ((h - low) / (high - low).max(1e-9)) as f32;
+                    self.vertex(
+                        scene.min_x + (x + dx) as f64 * scene.spacing,
+                        h * 80.,
+                        scene.min_z + (z + dz) as f64 * scene.spacing,
+                        [0.10 + t * 0.16, 0.24 + t * 0.24, 0.18 + t * 0.09],
+                    );
+                }
+            }
+        }
+        self.draw(Gl::TRIANGLES);
+        self.vertices.clear();
+        for pair in scene.points.windows(2) {
+            let a = pair[0];
+            let b = pair[1];
+            let dx = b[0] - a[0];
+            let dz = b[2] - a[2];
+            let length = dx.hypot(dz);
+            if length == 0. {
+                continue;
+            }
+            let nx = -dz / length * scene.surface_width / 2.;
+            let nz = dx / length * scene.surface_width / 2.;
+            let corners = [
+                [a[0] + nx, a[1] * 80. + 0.5, a[2] + nz],
+                [a[0] - nx, a[1] * 80. + 0.5, a[2] - nz],
+                [b[0] + nx, b[1] * 80. + 0.5, b[2] + nz],
+                [b[0] - nx, b[1] * 80. + 0.5, b[2] - nz],
+            ];
+            for i in [0, 1, 2, 1, 3, 2] {
+                let p = corners[i];
+                self.vertex(p[0], p[1], p[2], [0.98, 0.73, 0.20]);
+            }
+        }
+        self.draw(Gl::TRIANGLES);
+        self.vertices.clear();
+        for (p, color) in [
+            (scene.points[0], [0.2, 0.95, 0.95]),
+            (*scene.points.last().unwrap(), [1., 0.4, 0.3]),
+        ] {
+            for (a, b) in [
+                ([-2., -2.], [2., -2.]),
+                ([2., -2.], [2., 2.]),
+                ([2., 2.], [-2., 2.]),
+                ([-2., 2.], [-2., -2.]),
+            ] {
+                self.vertex(p[0] + a[0], p[1] * 80. + 1., p[2] + a[1], color);
+                self.vertex(p[0] + b[0], p[1] * 80. + 1., p[2] + b[1], color);
+                self.vertex(p[0], p[1] * 80. + 8., p[2], color);
+            }
+        }
+        self.draw(Gl::TRIANGLES);
+    }
+
     fn view_radius(&self) -> i32 {
         let horizontal = self.span * self.aspect;
         let ground = self.span / self.view.pitch_sin;
@@ -283,7 +441,7 @@ impl Viewer {
         self.vertices.extend_from_slice(&[
             (rx / (self.span * self.aspect)) as f32,
             ((height * self.view.pitch_cos - ry * self.view.pitch_sin) / self.span) as f32,
-            ((ry * self.view.pitch_cos - height * self.view.pitch_sin) / 20000.0) as f32,
+            ((-ry * self.view.pitch_cos - height * self.view.pitch_sin) / 20000.0) as f32,
             color[0],
             color[1],
             color[2],

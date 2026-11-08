@@ -7,6 +7,7 @@ pub mod common;
 pub mod core;
 pub mod executor;
 pub mod floating_origin;
+pub mod path;
 pub mod samples;
 pub mod save_state;
 

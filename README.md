@@ -8,7 +8,7 @@ The core crate has no third-party dependencies. It includes coordinate arithmeti
 
 The point-generation and cube-spawning sample preserves the C++ baseline's seed, chunk sizes, positions, retained overlaps, FIFO scene actions, and shutdown behavior. The browser viewer provides movement, zoom, queue pause, stop, and restart. Generation and rendering live in separate crates.
 
-The port does not yet implement Unity terrain or path algorithms, or a climate-workbench importer. Those systems are also absent from the reference C++ milestone. See the [remaining work and climate boundary](docs/port-plan.md).
+The Rust path planner adapts the C# terrain sample's search and spline tangents to an immutable terrain callback. A [repeatable RFL checkpoint](docs/route-checkpoint.md) connects two existing building locations on a fixed climate patch, using RFL's actual elevation sampler and explicit surface, shoulder, and material widths. The viewer can display this route with **Climate path** or `/?scene=route`. Unity terrain deformation and live RFL path consumption remain separate work. See the [remaining work and climate boundary](docs/port-plan.md).
 
 ## Build and check
 
@@ -18,6 +18,7 @@ Use Rust 1.88 or later. The viewer's cached dependencies are needed for workspac
 cargo fetch --locked
 cargo build --locked --offline
 cargo test --locked --offline --workspace
+node tools/check-route-fixture.mjs
 cargo fmt --all --check
 cargo clippy --locked --offline --workspace --all-targets -- -D warnings
 cargo run --locked --offline --example headless_simple
@@ -32,7 +33,7 @@ python3 tools/build-web.py
 python3 -m http.server 4173 --bind 127.0.0.1 --directory web
 ```
 
-Open <http://127.0.0.1:4173>. Drag or use WASD and arrow keys to move. Scroll to zoom.
+Open <http://127.0.0.1:4173>. Drag or use WASD and arrow keys to move. Pinch or scroll to zoom, twist to rotate, and slide two fingers vertically to tilt. Press **Climate path** to view the RFL route.
 
 The [viewer guide](docs/webgl.md) includes browser verification and executable C++ comparison commands. The browser check verifies a WebGL2 context with WebGPU unavailable, rendered pixels, real input, streaming, deterministic return, resource retirement, and page lifetime.
 
