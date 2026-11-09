@@ -10,6 +10,12 @@ The point-generation and cube-spawning sample preserves the C++ baseline's seed,
 
 The Rust path planner adapts the C# terrain sample's search and spline tangents to an immutable terrain callback. A [repeatable RFL checkpoint](docs/route-checkpoint.md) connects two existing building locations on a fixed climate patch, using RFL's actual elevation sampler and explicit surface, shoulder, and material widths. The viewer can display this route with **Climate path** or `/?scene=route`. RFL now consumes live routes, follows them on foot, grades the terrain with shared Rust deformation, and blends a material mask through its existing WebGL2 renderer. See the [live integration record](docs/live-rfl-routes.md) and [remaining work and climate boundary](docs/port-plan.md).
 
+The [location connection port](docs/location-connections.md) builds deterministic connections from existing site IDs and chart positions, with unique midpoint ownership. It preserves the C# within-cell and nearest cardinal-neighbor rules.
+
+The [cultivation port](docs/cultivation.md) generates and retains multiple roads from those connections. Patch leases share road payloads, support width-aware overlap queries, and retire roads on the last unload.
+
+The [GeoGrid composition port](docs/geogrid.md) combines location and road effects on a global grid. It preserves shared patch vertices and protects buried roofs, reserved surface geometry, and intentional openings.
+
 ## Build and check
 
 Use Rust 1.88 or later. The viewer's cached dependencies are needed for workspace checks; fetch them once when online.

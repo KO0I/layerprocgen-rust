@@ -28,6 +28,12 @@ Fresh terrain resources are staged before publication. Scene epochs, body identi
 
 Each body supports one bounded runtime road in solo mode. Replanning replaces it. Base edits and scene changes clear it. The result is not persisted in climate snapshots or replay data. The original checkpoint records its frozen source hashes; live integration checks use the current RFL source rather than rewriting that historical fixture.
 
+## Retained network CPU modules
+
+The location connection and [cultivation](cultivation.md) modules now provide deterministic connections over existing locations, multiple retained CPU roads, patch overlap queries, and last-lease retirement. These modules are not yet wired into RFL's live worker or multi-road deformation. The live RFL milestone above still installs one road per body.
+
+The [GeoGrid compositor](geogrid.md) now combines those roads with surface location pads, global lattice coordinates, full-cell underground roof protection, and explicit reservation and opening topology. Live Plate and Orbital adaptation still needs their coordinate and structure exports wired into the RFL worker and terrain mesh consumer.
+
 ## Remaining sequence
 
 1. Add terrain-detail and placement layers against the existing climate baseline. Check continuity across chunk and longitude boundaries.

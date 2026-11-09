@@ -447,7 +447,7 @@ const OFFSETS: [(i32, i32); 24] = [
     (-3, -3),
     (3, -3),
 ];
-fn valid_input(start: Point2, goal: Point2, o: PathOptions) -> bool {
+pub(crate) fn valid_input(start: Point2, goal: Point2, o: PathOptions) -> bool {
     let w = o.width;
     if !start.finite()
         || !goal.finite()

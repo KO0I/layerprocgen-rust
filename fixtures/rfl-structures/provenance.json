@@ -1,0 +1,21 @@
+{
+  "sourceRepository": "https://github.com/KO0I/rasd-fastwalker-league-js",
+  "sourceCommit": "69b73cae533b797ffb0deb4a61bb3fe66a77463a",
+  "sourceHashes": {
+    "packages/interiors/src/generator.mjs": "49d798868fb2456cd0f505cf6eb9cbbb17502171ce50ceb128e6380eccfff7a5",
+    "packages/interiors/src/plate.mjs": "54b9de831dc22dabef5384a6f05a5c0deb775c68d45fd815db554dcdeb602b1c",
+    "packages/interiors/src/terrain.mjs": "dc7b68a38173e64c16bca956b1810b4e8fca8203667645f2bdf53a973505cdf1",
+    "packages/interiors/src/room-shapes.mjs": "a5ff08998ce0a906b3bb8d3f8061b394bf2f0cb55261f1bbee3dc93322f75a23",
+    "packages/interiors/src/plate-landscape.mjs": "214912b4f1faf72ffb09edcc1c067db1b2d652d62ffdc2f3164b34663552aec0"
+  },
+  "settings": {
+    "seed": "GARDEN-07",
+    "roomDensity": 0,
+    "atriums": 0
+  },
+  "units": "metres",
+  "axes": "local x/z footprint, y up",
+  "footprints": "conservative bounds of each roomVolumes prism",
+  "base": "minimum source terrain over each prism bounding rectangle",
+  "sha256": "5b4b20bb2cb643779fddef38e750918676e220fbf00aa9012c247d7b6d7d8479"
+}
