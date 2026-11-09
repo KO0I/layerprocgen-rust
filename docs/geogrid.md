@@ -69,7 +69,7 @@ Numeric height remains available under holes, matching RFL's distinction between
 
 RFL Interiors uses metres, local XZ footprints, and positive Y up. Prefer each `roomVolumes` prism to the nominal room box because terraced rooms have different ceiling heights. A shaft or lift is an explicit reservation rather than an underground location flattened onto the surface.
 
-Plate flight geometry normalizes its local metres by 28,000. Live Orbital flight terrain uses inward-facing cylindrical coordinates. These need explicit coordinate adapters before this planar compositor can affect those worlds. Existing ship collision triangles and Interiors geometry stay authoritative. This CPU port does not install multi-road terrain in live RFL, which still supports one climate-world road per body.
+Plate flight geometry normalizes its local metres by 28,000. Live Orbital flight terrain uses inward-facing cylindrical coordinates. These need explicit coordinate adapters before this planar compositor can affect those worlds. Existing ship collision triangles and Interiors geometry stay authoritative. RFL now consumes owned scalar effects for bounded climate-world networks. Plate and Orbital protection/topology consumers remain separate.
 
 ## Limits and verification
 

@@ -18,31 +18,29 @@ RFL already separates `native/world` terrain algorithms, the `native/terrain-was
 
 The standalone climate workbench's scientific export uses Gaussian latitude coordinates and heights in metres. The game's version-one climate snapshot uses a regular longitude/latitude raster and game units. These are different formats. Before adding an importer, define which export is the input, its coordinates and units, how it wraps longitude, and how ocean elevations are represented. The existing game snapshot adapter is a reference for those conversions.
 
-LayerProCGen layers should consume that base terrain and climate data, then produce local terrain changes, placement records, and paths. The current C++ milestone provides no terrain or path algorithms and no path interchange schema. The [fixed RFL route checkpoint](route-checkpoint.md) now implements bounded routing between two existing climate-world building records, calling the existing RFL Rust sampler and exporting explicit widths and body-local path points. The frozen checkpoint remains a separate WebGL2 preview. RFL now also plans live routes through its retained Rust terrain worker, follows them through normal grounded movement, and installs shared Rust grading and an R8 material mask in its existing WebGL2 pipeline. See the [live integration record](live-rfl-routes.md).
+LayerProCGen layers should consume that base terrain and climate data, then produce local terrain changes, placement records, and paths. The current C++ milestone provides no terrain or path algorithms and no path interchange schema. The [fixed RFL route checkpoint](route-checkpoint.md) now implements bounded routing between two existing climate-world building records, calling the existing RFL Rust sampler and exporting explicit widths and body-local path points. The frozen checkpoint remains a separate WebGL2 preview. RFL now also plans live routes through its retained Rust terrain worker, follows them through normal grounded movement, and installs shared Rust grading and an RG8 path/cliff material atlas in its existing WebGL2 pipeline. See the [live integration record](live-rfl-routes.md).
 
 ## Live integration
 
-The RFL consumer pins this crate at `fb0f91e788167e5abe83aa5be5d224c6c6670c25`. It uses RFL's current climate snapshot and elevation sampler, resolves two existing building locations, and finds external approach points outside their projected meshes. A dedicated ground follower moves the actor physically along the route. The terrain effect is implemented in RFL's native world crate and shared with main-thread collision sampling through Wasm.
+The RFL consumer pins this crate at `378a0359f09f06a182496df9bd6d7bb56b9c6bce`. It resolves three through eight existing climate-world building locations, generates multiple roads through Cultivation, and installs their shared core terrain effect in both collision sampling and mesh compilation. Landscape supplies RG8 path/cliff weights and exact vegetation density. Selecting a road changes only its follower. See the [network work record](live-network-plan.md) and RFL's `docs/ground-routes.md`.
 
-Fresh terrain resources are staged before publication. Scene epochs, body identity, base revisions, and publication acknowledgements reject stale work. Geometry, collision heights, and the material mask change together. Route clearing and replayed planning preserve the original climate arrays. Native, Wasm parity, and real browser checks cover this slice.
+Fresh terrain, materials, density, and collision effects publish together through the existing stage/commit acknowledgement. Replanning samples the clamped ungraded base, including impacts. Base edits and scene changes clear the network. Runtime networks remain ephemeral and outside climate snapshots, replay, and multiplayer.
 
-Each body supports one bounded runtime road in solo mode. Replanning replaces it. Base edits and scene changes clear it. The result is not persisted in climate snapshots or replay data. The original checkpoint records its frozen source hashes; live integration checks use the current RFL source rather than rewriting that historical fixture.
+Ordinary mesh requests now compile bounded progressive batches. Core LOD selection keeps coarse coverage until all four immediate children are ready. Complete network staging prepares all target tiles before publication. Paused refinement resumes after cancellation, and rejecting an obsolete incremental delta rebuilds the worker/GPU baseline.
 
 ## Retained network CPU modules
 
-The location connection and [cultivation](cultivation.md) modules now provide deterministic connections over existing locations, multiple retained CPU roads, patch overlap queries, and last-lease retirement. These modules are not yet wired into RFL's live worker or multi-road deformation. The live RFL milestone above still installs one road per body.
+The location connection and [cultivation](cultivation.md) modules now provide deterministic connections over existing locations, multiple retained CPU roads, patch overlap queries, and last-lease retirement. RFL now consumes these modules through a bounded complete network snapshot. Patch-level last-lease retirement remains available to larger streaming adapters.
 
 The [GeoGrid compositor](geogrid.md) now combines those roads with surface location pads, global lattice coordinates, full-cell underground roof protection, and explicit reservation and opening topology. Live Plate and Orbital adaptation still needs their coordinate and structure exports wired into the RFL worker and terrain mesh consumer.
 
-The [Landscape port](landscape.md) adds physical upward normals, slope-aware climate/cliff/path weights, and deterministic grass/detail counts. It uses a checked halo and full-width cell road exclusion. These are immutable CPU outputs; RFL plant-system consumption and renderer publication are not yet connected.
+The [Landscape port](landscape.md) adds physical upward normals, slope-aware climate/cliff/path weights, and deterministic grass/detail counts. It uses a checked halo and full-width cell road exclusion. RFL now consumes these immutable outputs through its existing plant system and material texture.
 
 ## Remaining sequence
 
-1. Wire retained road networks, GeoGrid composition, and Landscape outputs into the live RFL worker and existing plant and WebGL2 resource adapters.
-2. Extend surface approaches and explicit entrance constraints, including Plate and Orbital coordinate and structure exports.
-3. Port TerrainLODManager coverage selection after live multi-road consumption is verified. Keep Unity terrain-object plumbing out of the renderer.
-4. Define persistent route records and invalidation across climate revisions, saved worlds, replay, and multiplayer.
-5. Extend generation and resource retirement to larger streamed patches and floating-origin transitions while retaining the verified ownership contract.
+1. Extend surface approaches and explicit entrance constraints, including Plate and Orbital coordinate and structure exports.
+2. Define persistent network records and invalidation across climate revisions, saved worlds, replay, and multiplayer.
+3. Extend generation and resource retirement to larger streamed patches and floating-origin transitions while retaining the verified ownership contract.
 
 ## Ownership contract
 

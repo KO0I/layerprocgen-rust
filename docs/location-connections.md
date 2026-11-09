@@ -8,6 +8,8 @@ Within each occupied cell, IDs are sorted and connected in a cycle, then the lon
 
 Results contain canonical endpoint IDs and the half-open grid cell containing their midpoint. Midpoints use floating-point coordinates rather than the source's integer truncation. Floor division gives negative coordinates the same ownership convention as positive coordinates. Each edge appears once. `owned_by` selects connections belonging to a cell. Reordering input records preserves identical output.
 
+`build_with_origin` additionally accepts an explicit fixed lattice origin. It changes cell ownership without translating physical site positions. The live finite-patch adapter keeps its selected sites in one cell and uses the original cycle-minus-longest rule.
+
 Supply the full patch and a complete one-cell halo before publishing interior-cell results. An omitted cell is treated as empty. Independently selecting a different chart origin or basis changes the grid and is not a valid way to reproduce a patch. A streaming adapter must retain the same chart and cell size.
 
 The connection output feeds the existing `path::plan_path` by resolving its endpoint IDs back to caller-owned site records. RFL should continue using its building-exclusion approach points when planning actual roads. This port provides CPU connectivity only. Live network orchestration, multiple installed roads, route retention, and junction grading belong to the subsequent cultivation and composition steps.
