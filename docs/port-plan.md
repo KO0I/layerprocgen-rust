@@ -34,12 +34,15 @@ The location connection and [cultivation](cultivation.md) modules now provide de
 
 The [GeoGrid compositor](geogrid.md) now combines those roads with surface location pads, global lattice coordinates, full-cell underground roof protection, and explicit reservation and opening topology. Live Plate and Orbital adaptation still needs their coordinate and structure exports wired into the RFL worker and terrain mesh consumer.
 
+The [Landscape port](landscape.md) adds physical upward normals, slope-aware climate/cliff/path weights, and deterministic grass/detail counts. It uses a checked halo and full-width cell road exclusion. These are immutable CPU outputs; RFL plant-system consumption and renderer publication are not yet connected.
+
 ## Remaining sequence
 
-1. Add terrain-detail and placement layers against the existing climate baseline. Check continuity across chunk and longitude boundaries.
-2. Extend bounded paths into connected networks with application-specific connectivity and entrance constraints.
-3. Define persistent route records and invalidation across climate revisions, saved worlds, replay, and multiplayer.
-4. Extend generation and resource retirement to larger streamed patches and floating-origin transitions while retaining the verified ownership contract.
+1. Wire retained road networks, GeoGrid composition, and Landscape outputs into the live RFL worker and existing plant and WebGL2 resource adapters.
+2. Extend surface approaches and explicit entrance constraints, including Plate and Orbital coordinate and structure exports.
+3. Port TerrainLODManager coverage selection after live multi-road consumption is verified. Keep Unity terrain-object plumbing out of the renderer.
+4. Define persistent route records and invalidation across climate revisions, saved worlds, replay, and multiplayer.
+5. Extend generation and resource retirement to larger streamed patches and floating-origin transitions while retaining the verified ownership contract.
 
 ## Ownership contract
 

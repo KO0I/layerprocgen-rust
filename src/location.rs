@@ -57,6 +57,17 @@ pub struct LocationConnections {
 }
 impl LocationConnections {
     pub fn build(locations: &[Location], cell_size: f64) -> Result<Self, LocationError> {
+        Self::build_with_origin(locations, cell_size, Point2 { x: 0., z: 0. })
+    }
+    /// Freezes cell ownership without translating caller-owned site coordinates.
+    pub fn build_with_origin(
+        locations: &[Location],
+        cell_size: f64,
+        origin: Point2,
+    ) -> Result<Self, LocationError> {
+        if !origin.x.is_finite() || !origin.z.is_finite() {
+            return Err(LocationError::InvalidLocation);
+        }
         if !cell_size.is_finite() || cell_size <= 0. {
             return Err(LocationError::InvalidCellSize);
         }
@@ -73,7 +84,7 @@ impl LocationConnections {
                 return Err(LocationError::DuplicateId);
             }
             cells
-                .entry(cell(location.position, cell_size)?)
+                .entry(cell(location.position, cell_size, origin)?)
                 .or_default()
                 .push(location);
         }
@@ -92,7 +103,7 @@ impl LocationConnections {
                 LocationConnection {
                     a: a.id.clone(),
                     b: b.id.clone(),
-                    owner: cell(midpoint, cell_size)?,
+                    owner: cell(midpoint, cell_size, origin)?,
                 },
             );
             Ok(())
@@ -171,9 +182,9 @@ fn pair<'a>(a: &'a Location, b: &'a Location) -> (&'a str, &'a str) {
 fn distance(a: &Location, b: &Location) -> f64 {
     (a.position.x * 0.25 - b.position.x * 0.25).hypot(a.position.z * 0.25 - b.position.z * 0.25)
 }
-fn cell(point: Point2, size: f64) -> Result<LocationCell, LocationError> {
-    let x = (point.x / size).floor();
-    let z = (point.z / size).floor();
+fn cell(point: Point2, size: f64, origin: Point2) -> Result<LocationCell, LocationError> {
+    let x = ((point.x - origin.x) / size).floor();
+    let z = ((point.z - origin.z) / size).floor();
     if x < i32::MIN as f64 || x > i32::MAX as f64 || z < i32::MIN as f64 || z > i32::MAX as f64 {
         return Err(LocationError::CellOutOfRange);
     }

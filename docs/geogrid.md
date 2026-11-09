@@ -22,7 +22,7 @@ Nearest-location metadata contains the vector toward the location center and sig
 
 `GridRequest` contains a global integer origin and cell counts. Vertex coordinates are calculated as `global_index * spacing`. Incident cell bounds use neighboring global indices as well. Patches do not calculate world coordinates from their own local origins. This includes negative coordinates and fractional spacing.
 
-`grid(request)` returns row-major vertices and cell topology. There is one more vertex than cell along each axis. `vertex(global_point)` and `cell(global_point)` query the result. Identical snapshots produce identical shared vertices regardless of request order.
+`grid(request)` returns row-major vertices and cell topology. `vertices()`, `cells()`, and `spacing()` expose read-only snapshot data. `cell_has_road(global_cell)` provides conservative full-width road intersection, including roads missed by vertex masks. There is one more vertex than cell along each axis. `vertex(global_point)` and `cell(global_point)` query the result. Identical snapshots produce identical shared vertices regardless of request order.
 
 `terrain_sample(point)` interpolates the locations-only global grid using its two terrain triangles. It returns a `TerrainSample` for the existing path planner. The caller can propagate a sampling error separately or map it to unavailable terrain at the planner boundary.
 
@@ -48,6 +48,12 @@ drop(terrain_patch);
 `compose_patch` acquires the cultivation demand covering the patch, captures the complete retained road set, and generates final terrain. Candidate road envelopes already include their search corridor and full widths. A road owned outside the patch still contributes at the shared border. `GeoGridPatch` keeps that demand until it unloads. A failed composition drops its new demand and preserves existing leases.
 
 `with_roads(roads)` creates an immutable final snapshot for explicit CPU queries. Its caller supplies a complete road snapshot. `compose_patch` is the operation that combines road acquisition, contributor completeness, and patch lifetime. Neither operation mutates the pre-route layer.
+
+## Owned scalar effects
+
+`GeoGridComposition::surface_effects()` exports immutable location and road geometry for a consumer that already owns its base-height sampler. `SurfaceEffects::sample(point, source_height)` uses the same blend accumulator as grid generation. A bounded spatial index preserves canonical segment order and avoids visiting the whole network for each terrain query. The snapshot owns no climate arrays or callback.
+
+This export rejects every composition containing protections with `ProtectedEffectsRequireGrid`. Buried cover and opening topology require incident-cell support and the full grid consumer. A scalar height adapter cannot preserve that contract.
 
 ## Underground structures and openings
 

@@ -1,6 +1,9 @@
 // Copyright (c) Rune Skovbo Johansen
 // SPDX-License-Identifier: MPL-2.0
 //! Global-lattice composition adapted from GeoGridLayer and PathsBurstMethod.
+mod effects;
+pub use effects::{SurfaceEffectSample, SurfaceEffects};
+
 use crate::cultivation::{CultivationLayer, CultivationPatch, PatchBounds, Road};
 use crate::path::{PathPoint, PathWidth, Point2, TerrainSample};
 use std::collections::BTreeMap;
@@ -10,7 +13,7 @@ use std::{error::Error, fmt};
 const MAX_COORDINATE: f64 = 1e12;
 const MAX_ITEMS: usize = 4096;
 const MAX_SEGMENTS: usize = 262_144;
-const MAX_VERTICES: usize = 1_048_576;
+pub(crate) const MAX_VERTICES: usize = 1_048_576;
 const MAX_GRID_WORK: usize = 20_000_000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -103,6 +106,7 @@ impl GeoSample {
 #[derive(Debug)]
 pub enum GeoGridError {
     InvalidInput,
+    ProtectedEffectsRequireGrid,
     DuplicateId(String),
     ConflictingRoad {
         a: String,
@@ -128,6 +132,9 @@ impl fmt::Display for GeoGridError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidInput => f.write_str("invalid GeoGrid input"),
+            Self::ProtectedEffectsRequireGrid => {
+                f.write_str("protected composition requires grid support and topology")
+            }
             Self::DuplicateId(id) => write!(f, "duplicate GeoGrid ID {id}"),
             Self::ConflictingRoad { a, b } => write!(f, "conflicting road geometry for {a} to {b}"),
             Self::MissingTerrain(p) => write!(f, "missing base terrain at {}, {}", p.x, p.z),
@@ -174,14 +181,43 @@ pub struct GeoGridComposition<'a, S> {
     roads: Vec<Effect>,
 }
 
+/// Immutable derived grid. Its lattice and protection data stay together.
+///
+/// ```compile_fail,E0616
+/// use layerprocgen::geogrid::GeoGrid;
+/// fn rescale(grid: &mut GeoGrid) { grid.spacing = 2.0; }
+/// ```
+///
+/// ```compile_fail,E0616
+/// use layerprocgen::geogrid::GeoGrid;
+/// fn remove_cover(grid: &mut GeoGrid) { grid.vertices[0].height = -1000.0; }
+/// ```
+///
+/// ```compile_fail,E0616
+/// use layerprocgen::geogrid::{GeoGrid, SurfacePresence};
+/// fn close_opening(grid: &mut GeoGrid) { grid.cells[0] = SurfacePresence::Solid; }
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct GeoGrid {
     request: GridRequest,
-    pub spacing: f64,
-    pub vertices: Vec<GeoSample>,
-    pub cells: Vec<SurfacePresence>,
+    spacing: f64,
+    vertices: Vec<GeoSample>,
+    cells: Vec<SurfacePresence>,
+    cell_roads: Vec<bool>,
 }
 impl GeoGrid {
+    pub fn spacing(&self) -> f64 {
+        self.spacing
+    }
+    pub fn vertices(&self) -> &[GeoSample] {
+        &self.vertices
+    }
+    pub fn cells(&self) -> &[SurfacePresence] {
+        &self.cells
+    }
+    pub fn request(&self) -> GridRequest {
+        self.request
+    }
     pub fn vertex(&self, point: GridPoint) -> Option<&GeoSample> {
         let x = point.x.checked_sub(self.request.min.x)?;
         let z = point.z.checked_sub(self.request.min.z)?;
@@ -195,7 +231,7 @@ impl GeoGrid {
         self.vertices
             .get(z as usize * (self.request.cells_x as usize + 1) + x as usize)
     }
-    pub fn cell(&self, point: GridPoint) -> Option<SurfacePresence> {
+    fn cell_index(&self, point: GridPoint) -> Option<usize> {
         let x = point.x.checked_sub(self.request.min.x)?;
         let z = point.z.checked_sub(self.request.min.z)?;
         if x < 0
@@ -205,9 +241,14 @@ impl GeoGrid {
         {
             return None;
         }
-        self.cells
-            .get(z as usize * self.request.cells_x as usize + x as usize)
-            .copied()
+        Some(z as usize * self.request.cells_x as usize + x as usize)
+    }
+    pub fn cell(&self, point: GridPoint) -> Option<SurfacePresence> {
+        self.cells.get(self.cell_index(point)?).copied()
+    }
+    /// Conservative full surface, shoulder and material footprint intersection.
+    pub fn cell_has_road(&self, point: GridPoint) -> Option<bool> {
+        self.cell_roads.get(self.cell_index(point)?).copied()
     }
 }
 
@@ -452,13 +493,16 @@ impl<S: Fn(Point2) -> Option<TerrainSample>> GeoGridLayer<S> {
         }
         Ok(result)
     }
-    fn cell_presence(&self, point: GridPoint) -> Result<SurfacePresence, GeoGridError> {
+    fn cell_bounds(&self, point: GridPoint) -> Result<PatchBounds, GeoGridError> {
         let min = self.position(point)?;
         let max = self.position(GridPoint {
             x: point.x.checked_add(1).ok_or(GeoGridError::InvalidInput)?,
             z: point.z.checked_add(1).ok_or(GeoGridError::InvalidInput)?,
         })?;
-        Ok(self.presence(PatchBounds { min, max }))
+        Ok(PatchBounds { min, max })
+    }
+    fn cell_presence(&self, point: GridPoint) -> Result<SurfacePresence, GeoGridError> {
+        Ok(self.presence(self.cell_bounds(point)?))
     }
     fn presence(&self, support: PatchBounds) -> SurfacePresence {
         let mut presence = SurfacePresence::Solid;
@@ -578,7 +622,7 @@ impl<S: Fn(Point2) -> Option<TerrainSample>> GeoGridLayer<S> {
             .checked_mul(r.cells_z as usize + 1)
             .ok_or(GeoGridError::Budget)?;
         let work = vertices
-            .checked_mul(self.pads.len() * 2 + self.protections.len() * 2 + road_segments + 1)
+            .checked_mul(self.pads.len() * 2 + self.protections.len() * 3 + road_segments * 2 + 1)
             .ok_or(GeoGridError::Budget)?;
         if vertices > MAX_VERTICES || work > MAX_GRID_WORK {
             return Err(GeoGridError::Budget);
@@ -601,12 +645,26 @@ impl<S: Fn(Point2) -> Option<TerrainSample>> GeoGridLayer<S> {
             }
         }
         let mut cells = Vec::with_capacity(r.cells_x as usize * r.cells_z as usize);
+        let mut cell_roads = Vec::with_capacity(cells.capacity());
         for z in 0..r.cells_z {
             for x in 0..r.cells_x {
-                cells.push(self.cell_presence(GridPoint {
+                let bounds = self.cell_bounds(GridPoint {
                     x: r.min.x + i64::from(x),
                     z: r.min.z + i64::from(z),
-                })?);
+                })?;
+                cells.push(self.presence(bounds));
+                cell_roads.push(roads.iter().any(|road| {
+                    if !overlap(road.bounds, bounds) {
+                        return false;
+                    }
+                    let padded = expanded(bounds, effect_radius(road.width));
+                    if road.points.len() == 1 {
+                        return contains(padded, road.points[0].position);
+                    }
+                    road.points
+                        .windows(2)
+                        .any(|pair| segment_intersects(pair[0].position, pair[1].position, padded))
+                }));
             }
         }
         Ok(GeoGrid {
@@ -614,10 +672,19 @@ impl<S: Fn(Point2) -> Option<TerrainSample>> GeoGridLayer<S> {
             spacing: self.spacing,
             vertices,
             cells,
+            cell_roads,
         })
     }
 }
 impl<S: Fn(Point2) -> Option<TerrainSample>> GeoGridComposition<'_, S> {
+    /// Scalar base-height consumers cannot enforce grid support or opening topology.
+    pub fn surface_effects(&self) -> Result<SurfaceEffects, GeoGridError> {
+        if !self.layer.protections.is_empty() {
+            return Err(GeoGridError::ProtectedEffectsRequireGrid);
+        }
+        SurfaceEffects::new(&self.layer.locations, &self.roads)
+    }
+
     pub fn sample_vertex(&self, point: GridPoint) -> Result<GeoSample, GeoGridError> {
         self.layer.sample(point, &self.roads)
     }
@@ -706,47 +773,77 @@ fn measure(p: Point2, a: PathPoint, b: PathPoint) -> (f64, f64) {
         a.height + (b.height - a.height) * t,
     )
 }
+fn segment_bounds(a: PathPoint, b: PathPoint, width: PathWidth) -> PatchBounds {
+    expanded(
+        PatchBounds {
+            min: Point2 {
+                x: a.position.x.min(b.position.x),
+                z: a.position.z.min(b.position.z),
+            },
+            max: Point2 {
+                x: a.position.x.max(b.position.x),
+                z: a.position.z.max(b.position.z),
+            },
+        },
+        effect_radius(width),
+    )
+}
 fn blend(p: Point2, source: f64, effects: &[Effect]) -> (f64, f64) {
+    let segments = effects
+        .iter()
+        .filter(|effect| contains(effect.bounds, p))
+        .flat_map(|effect| {
+            (0..effect.points.len().max(2) - 1).map(move |i| {
+                (
+                    effect.points[i.min(effect.points.len() - 1)],
+                    effect.points[(i + 1).min(effect.points.len() - 1)],
+                    effect.width,
+                )
+            })
+        });
+    blend_segments(p, source, segments)
+}
+fn blend_segments(
+    p: Point2,
+    source: f64,
+    segments: impl Iterator<Item = (PathPoint, PathPoint, PathWidth)>,
+) -> (f64, f64) {
     let (mut max_log, mut total, mut height, mut influence, mut coverage) =
         (f64::NEG_INFINITY, 0., 0., 0., 0_f64);
-    for effect in effects {
-        if !contains(effect.bounds, p) {
+    for (a, b, width) in segments {
+        if !contains(segment_bounds(a, b, width), p) {
             continue;
         }
-        let inner = effect.width.surface * 0.5;
-        let shoulder = effect.width.shoulder;
+        let inner = width.surface * 0.5;
+        let shoulder = width.shoulder;
         let outer = inner + shoulder;
-        let material = effect.width.material * 0.5;
-        for i in 0..effect.points.len().max(2) - 1 {
-            let a = effect.points[i.min(effect.points.len() - 1)];
-            let b = effect.points[(i + 1).min(effect.points.len() - 1)];
-            let (distance, target) = measure(p, a, b);
-            if material > 0. {
-                coverage = coverage.max(((material - distance) / material.min(0.5)).clamp(0., 1.));
-            }
-            if distance > outer || (shoulder > 0. && distance >= outer) {
-                continue;
-            }
-            let (log_weight, amount) = if shoulder == 0. {
-                (0., 1.)
-            } else {
-                (
-                    8. * ((outer - distance).ln() - shoulder.ln()),
-                    smooth((outer - distance) / shoulder),
-                )
-            };
-            if log_weight > max_log {
-                let scale = (max_log - log_weight).exp();
-                total *= scale;
-                height *= scale;
-                influence *= scale;
-                max_log = log_weight;
-            }
-            let weight = (log_weight - max_log).exp();
-            total += weight;
-            height += target * weight;
-            influence += amount * weight;
+        let material = width.material * 0.5;
+        let (distance, target) = measure(p, a, b);
+        if material > 0. {
+            coverage = coverage.max(((material - distance) / material.min(0.5)).clamp(0., 1.));
         }
+        if distance > outer || (shoulder > 0. && distance >= outer) {
+            continue;
+        }
+        let (log_weight, amount) = if shoulder == 0. {
+            (0., 1.)
+        } else {
+            (
+                8. * ((outer - distance).ln() - shoulder.ln()),
+                smooth((outer - distance) / shoulder),
+            )
+        };
+        if log_weight > max_log {
+            let scale = (max_log - log_weight).exp();
+            total *= scale;
+            height *= scale;
+            influence *= scale;
+            max_log = log_weight;
+        }
+        let weight = (log_weight - max_log).exp();
+        total += weight;
+        height += target * weight;
+        influence += amount * weight;
     }
     (
         if total == 0. {

@@ -474,3 +474,45 @@ fn independent_material_width_can_extend_beyond_grading() {
     assert_eq!(sample.height, 20.);
     assert_eq!(sample.road_coverage, 1.);
 }
+
+#[test]
+fn cell_road_footprint_detects_thin_roads_between_vertices() {
+    let layer = GeoGridLayer::new(1., vec![], vec![], base).unwrap();
+    let thin = road(
+        "a",
+        "b",
+        &[(0.4, 0.5, 20.), (0.6, 0.5, 20.)],
+        width(0.1, 0., 0.1),
+    );
+    let grid = layer
+        .with_roads(vec![thin])
+        .unwrap()
+        .grid(request(0, 0, 2, 1))
+        .unwrap();
+    for point in [gp(0, 0), gp(1, 0), gp(0, 1), gp(1, 1)] {
+        assert_eq!(grid.vertex(point).unwrap().road_coverage, 0.);
+    }
+    assert_eq!(grid.cell_has_road(gp(0, 0)), Some(true));
+    assert_eq!(grid.cell_has_road(gp(1, 0)), Some(false));
+    assert_eq!(grid.cell_has_road(gp(2, 0)), None);
+    assert_eq!(
+        layer
+            .grid(request(0, 0, 1, 1))
+            .unwrap()
+            .cell_has_road(gp(0, 0)),
+        Some(false)
+    );
+}
+
+#[test]
+fn point_road_footprint_uses_global_fractional_cells() {
+    let layer = GeoGridLayer::new(0.3, vec![], vec![], base).unwrap();
+    let point = road("a", "b", &[(-0.15, -0.15, 20.)], width(0.01, 0.01, 0.02));
+    let grid = layer
+        .with_roads(vec![point])
+        .unwrap()
+        .grid(request(-1, -1, 2, 2))
+        .unwrap();
+    assert_eq!(grid.cell_has_road(gp(-1, -1)), Some(true));
+    assert_eq!(grid.cell_has_road(gp(0, 0)), Some(false));
+}

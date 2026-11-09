@@ -16,6 +16,10 @@ The [cultivation port](docs/cultivation.md) generates and retains multiple roads
 
 The [GeoGrid composition port](docs/geogrid.md) combines location and road effects on a global grid. It preserves shared patch vertices and protects buried roofs, reserved surface geometry, and intentional openings.
 
+The [Landscape port](docs/landscape.md) derives shared-edge normals, slope-aware material weights, and globally seeded vegetation density from that composed terrain. Climate colors and plant assets stay with their existing owners.
+
+The [LOD coverage selector](docs/lod.md) keeps coarse terrain active until all four immediate children are ready. It returns stable CPU tile identities and sparse missing coverage without owning meshes or graphics resources.
+
 ## Build and check
 
 Use Rust 1.88 or later. The viewer's cached dependencies are needed for workspace checks; fetch them once when online.
