@@ -18,15 +18,22 @@ RFL already separates `native/world` terrain algorithms, the `native/terrain-was
 
 The standalone climate workbench's scientific export uses Gaussian latitude coordinates and heights in metres. The game's version-one climate snapshot uses a regular longitude/latitude raster and game units. These are different formats. Before adding an importer, define which export is the input, its coordinates and units, how it wraps longitude, and how ocean elevations are represented. The existing game snapshot adapter is a reference for those conversions.
 
-LayerProCGen layers should consume that base terrain and climate data, then produce local terrain changes, placement records, and paths. The current C++ milestone provides no terrain or path algorithms and no path interchange schema. The [fixed RFL route checkpoint](route-checkpoint.md) now implements bounded routing between two existing climate-world building records, calling the existing RFL Rust sampler and exporting explicit widths and body-local path points. The route is previewed separately in WebGL2. Live game worker consumption and terrain deformation remain unimplemented.
+LayerProCGen layers should consume that base terrain and climate data, then produce local terrain changes, placement records, and paths. The current C++ milestone provides no terrain or path algorithms and no path interchange schema. The [fixed RFL route checkpoint](route-checkpoint.md) now implements bounded routing between two existing climate-world building records, calling the existing RFL Rust sampler and exporting explicit widths and body-local path points. The frozen checkpoint remains a separate WebGL2 preview. RFL now also plans live routes through its retained Rust terrain worker, follows them through normal grounded movement, and installs shared Rust grading and an R8 material mask in its existing WebGL2 pipeline. See the [live integration record](live-rfl-routes.md).
+
+## Live integration
+
+The RFL consumer pins this crate at `fb0f91e788167e5abe83aa5be5d224c6c6670c25`. It uses RFL's current climate snapshot and elevation sampler, resolves two existing building locations, and finds external approach points outside their projected meshes. A dedicated ground follower moves the actor physically along the route. The terrain effect is implemented in RFL's native world crate and shared with main-thread collision sampling through Wasm.
+
+Fresh terrain resources are staged before publication. Scene epochs, body identity, base revisions, and publication acknowledgements reject stale work. Geometry, collision heights, and the material mask change together. Route clearing and replayed planning preserve the original climate arrays. Native, Wasm parity, and real browser checks cover this slice.
+
+Each body supports one bounded runtime road in solo mode. Replanning replaces it. Base edits and scene changes clear it. The result is not persisted in climate snapshots or replay data. The original checkpoint records its frozen source hashes; live integration checks use the current RFL source rather than rewriting that historical fixture.
 
 ## Remaining sequence
 
-1. Extend the verified fixed-world adapter to accept live versioned climate snapshots. Preserve macro terrain and sea/land classification.
-2. Port or implement terrain-detail and placement layers against that base. Check continuity across chunk and longitude boundaries.
-3. Extend the verified bounded path planner with application-specific connectivity, building/entrance constraints, and terrain modifications.
-4. Connect generated CPU results to the existing game resource adapter. Check stale responses, replacement, cancellation, floating origins, and cleanup.
-5. Add bounded background generation where needed. Keep worker-owned CPU state separate from renderer-owned GPU resources.
+1. Add terrain-detail and placement layers against the existing climate baseline. Check continuity across chunk and longitude boundaries.
+2. Extend bounded paths into connected networks with application-specific connectivity and entrance constraints.
+3. Define persistent route records and invalidation across climate revisions, saved worlds, replay, and multiplayer.
+4. Extend generation and resource retirement to larger streamed patches and floating-origin transitions while retaining the verified ownership contract.
 
 ## Ownership contract
 

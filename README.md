@@ -8,7 +8,7 @@ The core crate has no third-party dependencies. It includes coordinate arithmeti
 
 The point-generation and cube-spawning sample preserves the C++ baseline's seed, chunk sizes, positions, retained overlaps, FIFO scene actions, and shutdown behavior. The browser viewer provides movement, zoom, queue pause, stop, and restart. Generation and rendering live in separate crates.
 
-The Rust path planner adapts the C# terrain sample's search and spline tangents to an immutable terrain callback. A [repeatable RFL checkpoint](docs/route-checkpoint.md) connects two existing building locations on a fixed climate patch, using RFL's actual elevation sampler and explicit surface, shoulder, and material widths. The viewer can display this route with **Climate path** or `/?scene=route`. Unity terrain deformation and live RFL path consumption remain separate work. See the [remaining work and climate boundary](docs/port-plan.md).
+The Rust path planner adapts the C# terrain sample's search and spline tangents to an immutable terrain callback. A [repeatable RFL checkpoint](docs/route-checkpoint.md) connects two existing building locations on a fixed climate patch, using RFL's actual elevation sampler and explicit surface, shoulder, and material widths. The viewer can display this route with **Climate path** or `/?scene=route`. RFL now consumes live routes, follows them on foot, grades the terrain with shared Rust deformation, and blends a material mask through its existing WebGL2 renderer. See the [live integration record](docs/live-rfl-routes.md) and [remaining work and climate boundary](docs/port-plan.md).
 
 ## Build and check
 
